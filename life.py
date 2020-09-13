@@ -4,16 +4,17 @@ import argparse
 from itertools import product
 from time import sleep
 import tkinter as tk
-
+import tkinter.ttk as ttk
 
 BLOCK_SIZE = 10  # cell dimensions
-SIZE = 80   # board dimensions in terms of blocks
+SIZE = 64   # board dimensions in terms of blocks
 WINDOW_WIDTH, WINDOW_HEIGHT = SIZE * BLOCK_SIZE, SIZE * BLOCK_SIZE
 START_X, START_Y = SIZE // 2 - SIZE // 4, SIZE // 2 - SIZE // 4
 
 DELAY = 0.1  # time interval between steps
 
 FILL_COLOR = "yellow"  # cell fill color
+CANVAS_COLOR = "grey"
 
 DELIMITERS = [' ', '.']  # empty space character
 
@@ -22,42 +23,65 @@ class App(tk.Frame):
     def __init__(self, master=None, seed=None):
         super().__init__(master)
         self.master = master
+
+        self.seed = list(seed)
+        self.og_seed = list(seed)
+
         self.pack()
+
         self.create_widgets()
-        self.seed = seed
-        self.og_seed = seed
         self.draw()
 
     def create_widgets(self):
         self.canvas = tk.Canvas(
-            self.master, width=WINDOW_WIDTH, height=WINDOW_HEIGHT, background='black')
+            self.master, width=WINDOW_WIDTH, height=WINDOW_HEIGHT, background=CANVAS_COLOR)
+
+        self.canvas.bind("<Button-1>", self.add_cell)
+
         self.canvas.pack()
 
-        hl_color = '#3E4149'
+        # hl_color = '#3E4149'
+        # highlightbackground=hl_color
 
-        self.buttonframe = tk.Frame(self)
+        self.buttonframe = ttk.Frame(self)
         self.buttonframe.grid(row=1, column=0, columnspan=4)
 
-        self.next_btn = tk.Button(
-            self.buttonframe, text="next", command=self.step, highlightbackground=hl_color)
+        self.next_btn = ttk.Button(
+            self.buttonframe, text="next", command=self.step)
         self.next_btn.grid(row=0, column=1)
 
-        self.start_btn = tk.Button(
-            self.buttonframe, text="start", command=self.start, highlightbackground=hl_color)
+        self.start_btn = ttk.Button(
+            self.buttonframe, text="start", command=self.start)
         self.start_btn.grid(row=0, column=2)
 
-        self.reset_btn = tk.Button(
-            self.buttonframe, text="reset", command=self.reset, highlightbackground=hl_color)
+        self.reset_btn = ttk.Button(
+            self.buttonframe, text="reset", command=self.reset)
         self.reset_btn.grid(row=0, column=3)
 
-        self.quit_btn = tk.Button(self.buttonframe, text="quit",
-                                  command=self.master.destroy, highlightbackground=hl_color)
+        self.quit_btn = ttk.Button(self.buttonframe, text="quit",
+                                  command=self.master.destroy)
         self.quit_btn.grid(row=0, column=4)
+
+        self.canvas.focus_set()
 
     def draw_cell(self, cell):
         x, y = cell
         self.canvas.create_rectangle(x*BLOCK_SIZE, y*BLOCK_SIZE,
                                      x*BLOCK_SIZE+BLOCK_SIZE, y*BLOCK_SIZE+BLOCK_SIZE, fill=FILL_COLOR)
+
+    def clear_cell(self, cell):
+        x, y = cell
+        self.canvas.delete(self.canvas.find_closest(x,y))
+
+    def add_cell(self, e):
+        cell = (e.x // BLOCK_SIZE, e.y // BLOCK_SIZE)
+        # print(cell)
+        if cell not in self.seed:
+          self.seed.append(cell)
+          self.draw_cell(cell)
+        else:
+          self.seed.remove(cell)
+          self.clear_cell((e.x, e.y))
 
     def draw(self):
         self.canvas.delete("all")
