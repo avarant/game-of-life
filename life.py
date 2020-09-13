@@ -7,7 +7,7 @@ import tkinter as tk
 import tkinter.ttk as ttk
 
 BLOCK_SIZE = 10  # cell dimensions
-SIZE = 32   # board dimensions in terms of blocks
+SIZE = 64   # board dimensions in terms of blocks
 WINDOW_WIDTH, WINDOW_HEIGHT = SIZE * BLOCK_SIZE, SIZE * BLOCK_SIZE
 START_X, START_Y = SIZE // 2 - SIZE // 4, SIZE // 2 - SIZE // 4
 
