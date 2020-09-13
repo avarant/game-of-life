@@ -7,7 +7,7 @@ import tkinter as tk
 import tkinter.ttk as ttk
 
 BLOCK_SIZE = 10  # cell dimensions
-SIZE = 64   # board dimensions in terms of blocks
+SIZE = 32   # board dimensions in terms of blocks
 WINDOW_WIDTH, WINDOW_HEIGHT = SIZE * BLOCK_SIZE, SIZE * BLOCK_SIZE
 START_X, START_Y = SIZE // 2 - SIZE // 4, SIZE // 2 - SIZE // 4
 
@@ -39,9 +39,6 @@ class App(tk.Frame):
         self.canvas.bind("<Button-1>", self.add_cell)
 
         self.canvas.pack()
-
-        # hl_color = '#3E4149'
-        # highlightbackground=hl_color
 
         self.buttonframe = ttk.Frame(self)
         self.buttonframe.grid(row=1, column=0, columnspan=4)
@@ -119,10 +116,15 @@ class App(tk.Frame):
         self.canvas.pack()
         self.isRunning = True
 
-        while self.isRunning and len(self.seed) > 0:
+        prev = None
+        while self.isRunning and len(self.seed) > 0 and prev != self.seed:
+            # print(self.seed)
             sleep(DELAY)
+            prev = list(self.seed)
             self.step()
             self.canvas.update()
+        
+        self.stop()
 
     def stop(self):
         self.isRunning = False
