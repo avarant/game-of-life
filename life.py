@@ -6,10 +6,11 @@ from time import sleep
 import tkinter as tk
 import tkinter.ttk as ttk
 
-BLOCK_SIZE = 10  # cell dimensions
-SIZE = 64   # board dimensions in terms of blocks
-WINDOW_WIDTH, WINDOW_HEIGHT = SIZE * BLOCK_SIZE, SIZE * BLOCK_SIZE
-START_X, START_Y = SIZE // 2 - SIZE // 4, SIZE // 2 - SIZE // 4
+BLOCK_SIZE = 8  # cell dimensions
+SIZE = 96   # board dimensions in terms of blocks
+CANVAS_WIDTH, CANVAS_HEIGHT = SIZE * BLOCK_SIZE, SIZE * BLOCK_SIZE
+# START_X, START_Y = SIZE // 2 - SIZE // 4, SIZE // 2 - SIZE // 4
+START_X, START_Y = 10, 10
 
 DELAY = 0.1  # time interval between steps
 
@@ -24,6 +25,9 @@ class App(tk.Frame):
         super().__init__(master)
         self.master = master
 
+        self.master.maxsize(CANVAS_HEIGHT, CANVAS_WIDTH)
+        self.master.minsize(CANVAS_HEIGHT, CANVAS_WIDTH)
+
         self.seed = list(seed)
         self.og_seed = list(seed)
 
@@ -34,7 +38,7 @@ class App(tk.Frame):
 
     def create_widgets(self):
         self.canvas = tk.Canvas(
-            self.master, width=WINDOW_WIDTH, height=WINDOW_HEIGHT, background=CANVAS_COLOR)
+            self.master, width=CANVAS_WIDTH, height=CANVAS_HEIGHT, background=CANVAS_COLOR)
 
         self.canvas.bind("<Button-1>", self.add_cell)
 
@@ -56,7 +60,7 @@ class App(tk.Frame):
         self.reset_btn.grid(row=0, column=3)
 
         self.quit_btn = ttk.Button(self.buttonframe, text="quit",
-                                  command=self.master.destroy)
+                                   command=self.master.destroy)
         self.quit_btn.grid(row=0, column=4)
 
         self.canvas.focus_set()
@@ -68,17 +72,17 @@ class App(tk.Frame):
 
     def clear_cell(self, cell):
         x, y = cell
-        self.canvas.delete(self.canvas.find_closest(x,y))
+        self.canvas.delete(self.canvas.find_closest(x, y))
 
     def add_cell(self, e):
         cell = (e.x // BLOCK_SIZE, e.y // BLOCK_SIZE)
         # print(cell)
         if cell not in self.seed:
-          self.seed.append(cell)
-          self.draw_cell(cell)
+            self.seed.append(cell)
+            self.draw_cell(cell)
         else:
-          self.seed.remove(cell)
-          self.clear_cell((e.x, e.y))
+            self.seed.remove(cell)
+            self.clear_cell((e.x, e.y))
 
     def draw(self):
         self.canvas.delete("all")
@@ -102,9 +106,8 @@ class App(tk.Frame):
                 if cell in self.seed:
                     if n == 2 or n == 3:
                         res.append(cell)
-                else:
-                    if n == 3:
-                        res.append(cell)
+                elif n == 3:
+                    res.append(cell)
 
         self.seed = res
         self.draw()
@@ -123,7 +126,7 @@ class App(tk.Frame):
             prev = list(self.seed)
             self.step()
             self.canvas.update()
-        
+
         self.stop()
 
     def stop(self):
@@ -137,6 +140,27 @@ class App(tk.Frame):
         self.draw()
 
 
+def read_txt(path, start=(START_X, START_Y)):
+    if not os.path.isfile(path):
+        print("Error: %s not found" % path)
+        sys.exit()
+
+    x,y = start
+    seed = []
+    with open(path) as f:
+        reader = f.readlines()
+
+        for i, row in enumerate(reader):
+            row = row.strip('\n')
+            # print(row)
+            for j, c in enumerate(row):
+                if c not in DELIMITERS:
+                    seed.append((x+j, y+i))
+        # print(seed)
+
+    return seed
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Conway's Game of Life")
@@ -148,23 +172,9 @@ def main():
     x, y = START_X, START_Y  # start coords
 
     if path:
-        if not os.path.isfile(path):
-            print("Error: %s not found" % path)
-            sys.exit()
+        seed = read_txt(path)
 
-        with open(path) as f:
-            reader = f.readlines()
-            seed = []
-            for i, row in enumerate(reader):
-                row = row.strip('\n')
-                # print(row)
-                for j, c in enumerate(row):
-                    if c not in DELIMITERS:
-                        seed.append((x+j, y+i))
-            # print(seed)
-
-    else:
-        # glider pattern
+    else:  # default pattern (glider)
         seed = [(x, y), (x+1, y+1), (x+1, y+2), (x, y+2), (x-1, y+2)]
 
     root = tk.Tk()
