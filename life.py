@@ -10,8 +10,8 @@ import copy
 BLOCK_SIZE = 8  # cell dimensions
 SIZE = 96   # board dimensions in terms of blocks
 CANVAS_WIDTH, CANVAS_HEIGHT = SIZE * BLOCK_SIZE, SIZE * BLOCK_SIZE
-# START_X, START_Y = SIZE // 2 - SIZE // 4, SIZE // 2 - SIZE // 4
-START_X, START_Y = 10, 10
+START_X, START_Y = SIZE // 2 - SIZE // 4, SIZE // 2 - SIZE // 4
+# START_X, START_Y = 10, 10
 
 DELAY = 0.1  # time interval between steps
 
