@@ -5,6 +5,7 @@ from itertools import product
 from time import sleep
 import tkinter as tk
 import tkinter.ttk as ttk
+import copy
 
 BLOCK_SIZE = 8  # cell dimensions
 SIZE = 96   # board dimensions in terms of blocks
@@ -20,27 +21,24 @@ CANVAS_COLOR = "grey"
 DELIMITERS = [' ', '.']  # empty space character
 
 
-class App(tk.Frame):
+class Life(tk.Frame):
     def __init__(self, master=None, seed=None):
         super().__init__(master)
         self.master = master
+        self.seed = copy.deepcopy(seed)
 
         self.master.maxsize(CANVAS_HEIGHT, CANVAS_WIDTH)
         self.master.minsize(CANVAS_HEIGHT, CANVAS_WIDTH)
-
-        self.seed = list(seed)
-        self.og_seed = list(seed)
-
         self.pack()
 
         self.create_widgets()
-        self.draw()
+        self.reset()
 
     def create_widgets(self):
         self.canvas = tk.Canvas(
             self.master, width=CANVAS_WIDTH, height=CANVAS_HEIGHT, background=CANVAS_COLOR)
 
-        self.canvas.bind("<Button-1>", self.add_cell)
+        self.canvas.bind("<Button-1>", self.toggle_cell)
 
         self.canvas.pack()
 
@@ -65,29 +63,21 @@ class App(tk.Frame):
 
         self.canvas.focus_set()
 
-    def draw_cell(self, cell):
+    def add_cell(self, cell):
         x, y = cell
-        self.canvas.create_rectangle(x*BLOCK_SIZE, y*BLOCK_SIZE,
-                                     x*BLOCK_SIZE+BLOCK_SIZE, y*BLOCK_SIZE+BLOCK_SIZE, fill=FILL_COLOR)
+        self.cells[cell] = self.canvas.create_rectangle(x*BLOCK_SIZE, y*BLOCK_SIZE,
+                                            x*BLOCK_SIZE+BLOCK_SIZE, y*BLOCK_SIZE+BLOCK_SIZE, fill=FILL_COLOR)
 
-    def clear_cell(self, cell):
-        x, y = cell
-        self.canvas.delete(self.canvas.find_closest(x, y))
+    def delete_cell(self, cell):
+        self.canvas.delete(self.cells[cell])
+        self.cells.pop(cell)
 
-    def add_cell(self, e):
+    def toggle_cell(self, e):
         cell = (e.x // BLOCK_SIZE, e.y // BLOCK_SIZE)
-        # print(cell)
-        if cell not in self.seed:
-            self.seed.append(cell)
-            self.draw_cell(cell)
+        if cell not in self.cells.keys():
+            self.add_cell(cell)
         else:
-            self.seed.remove(cell)
-            self.clear_cell((e.x, e.y))
-
-    def draw(self):
-        self.canvas.delete("all")
-        for cell in self.seed:
-            self.draw_cell(cell)
+            self.delete_cell(cell)
 
     # https://stackoverflow.com/questions/1620940/determining-neighbours-of-cell-two-dimensional-list
     def neighbors(self, cell):
@@ -96,21 +86,23 @@ class App(tk.Frame):
                 yield c
 
     def step(self):
-        res = []
+        live = list(self.cells.keys())
 
-        for i in range(SIZE):
-            for j in range(SIZE):
-                cell = (i, j)
-                n = sum(1 for x in self.neighbors(cell) if x in self.seed)
+        all_cells = set([])
+        for cell in live:
+            all_cells.add(cell)
+            for neighbor in self.neighbors(cell):
+                all_cells.add(neighbor)
 
-                if cell in self.seed:
-                    if n == 2 or n == 3:
-                        res.append(cell)
-                elif n == 3:
-                    res.append(cell)
+        for cell in all_cells:
+            n = sum(1 for x in self.neighbors(cell) if x in live)
+            if cell in live:
+                if not (n == 2 or n == 3):
+                    self.delete_cell(cell)
+            elif n == 3:
+                self.add_cell(cell)
 
-        self.seed = res
-        self.draw()
+        self.canvas.update()
 
     def start(self):
         self.start_btn.config(text="stop")
@@ -120,12 +112,10 @@ class App(tk.Frame):
         self.isRunning = True
 
         prev = None
-        while self.isRunning and len(self.seed) > 0 and prev != self.seed:
-            # print(self.seed)
+        while self.isRunning and len(self.seed) > 0 and prev != list(self.cells.keys()):
             sleep(DELAY)
-            prev = list(self.seed)
+            prev = list(self.cells.keys())
             self.step()
-            self.canvas.update()
 
         self.stop()
 
@@ -136,8 +126,10 @@ class App(tk.Frame):
 
     def reset(self):
         self.stop()
-        self.seed = self.og_seed
-        self.draw()
+        self.canvas.delete("all")
+        self.cells = {}
+        for cell in self.seed:
+          self.add_cell(cell)
 
 
 def read_txt(path, start=(START_X, START_Y)):
@@ -145,7 +137,7 @@ def read_txt(path, start=(START_X, START_Y)):
         print("Error: %s not found" % path)
         sys.exit()
 
-    x,y = start
+    x, y = start
     seed = []
     with open(path) as f:
         reader = f.readlines()
@@ -178,7 +170,7 @@ def main():
         seed = [(x, y), (x+1, y+1), (x+1, y+2), (x, y+2), (x-1, y+2)]
 
     root = tk.Tk()
-    app = App(master=root, seed=seed)
+    app = Life(master=root, seed=seed)
     app.mainloop()
 
 
