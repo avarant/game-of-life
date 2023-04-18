@@ -1,4 +1,4 @@
-# game-of-life
+# Game of Life
 Conway's Game of Life animated using [pygame](https://www.pygame.org/news)
 
 Rules from [Wikipedia](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life)
