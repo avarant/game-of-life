@@ -117,7 +117,7 @@ def main(args):
     fps = pygame.time.Clock()
     pygame.display.set_caption('Conway\'s Game of Life - Press "q" to quit.')
 
-    window_x, window_y = 512, 512
+    window_x, window_y = N * BLOCK_SIZE, N * BLOCK_SIZE
     game_window = pygame.display.set_mode((window_x, window_y))
     game_window.fill(black)
 
