@@ -38,9 +38,8 @@ class GameOfLife:
             self.seed = GLIDER_GUN[1:]
         else:
             self.seed = seed
-        self._state = GameOfLife._parse(
-            self.seed
-        )  # current state represented as a binary integer
+        # current state represented as a binary integer
+        self._state = GameOfLife._parse(self.seed)
         self._gen = 0  # generation (step)
 
         self._render = render
@@ -52,6 +51,7 @@ class GameOfLife:
             pygame.display.set_caption('Conway\'s Game of Life - Press "q" to quit.')
             window_x, window_y = N * BLOCK_SIZE, N * BLOCK_SIZE
             self._canvas = pygame.display.set_mode((window_x, window_y))
+            self.render()
 
     @staticmethod
     def _parse(s):
