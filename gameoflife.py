@@ -4,110 +4,132 @@ import math
 import argparse
 import pygame
 
+
+GLIDER_GUN = """
+........................O...........
+......................O.O...........
+............OO......OO............OO
+...........O...O....OO............OO
+OO........O.....O...OO..............
+OO........O...O.OO....O.O...........
+..........O.....O.......O...........
+...........O...O....................
+............OO......................
+"""
+
 N = 50
-BLOCK_SIZE = 10
-
-getBit = lambda i, n: i >> n & 1
-neighbors = lambda x: [
-    x - 1,
-    x + 1,
-    x - N,
-    x + N,
-    x - N - 1,
-    x - N + 1,
-    x + N - 1,
-    x + N + 1,
-]
-count = lambda i, x: sum(map(lambda z: getBit(i, z) if z > -1 else 0, neighbors(x)))
+BLOCK_SIZE = 10  # pygame window block size
 
 
-def bits(n):
-    while n:
-        b = n & (~n + 1)
-        yield b
-        n ^= b
+class GameOfLife:
+    def __init__(self, seed=None):
+        # default seed is glider gun
+        if seed is None:
+            self.seed = GLIDER_GUN[1:]
+        else:
+            self.seed = seed
+        self._state = GameOfLife._parse(
+            self.seed
+        )  # current state represented as a binary integer
+        self._gen = 0  # generation (step)
 
+    @staticmethod
+    def _parse(s):
+        s = s.replace(" ", "")
+        s = s.replace(".", "0")
+        s = s.replace("O", "1")
 
-def setBit(num, ind, val):
-    mask = 1 << ind
-    num &= ~mask
-    if val:
-        num |= mask
-    return num
+        p = N - s.index("\n")
+        if p > 0:
+            s = s.replace("\n", "0" * p)
+        else:
+            s = s.replace("\n", "")
 
+        s = s[::-1]
+        return int(s, 2)
 
-def step(i):
-    j = i
+    @staticmethod
+    def _get_bit(i, n):
+        return i >> n & 1
 
-    for b in bits(i):
-        index = int(math.log(b, 2))
+    @staticmethod
+    def _get_neighbors(x):
+        return [
+            x - 1,
+            x + 1,
+            x - N,
+            x + N,
+            x - N - 1,
+            x - N + 1,
+            x + N - 1,
+            x + N + 1,
+        ]
 
-        n = count(i, index)
-        if n < 2 or n > 3:
-            j = setBit(j, index, 0)
+    @staticmethod
+    def _count_neighbors(i, x):
+        f = lambda z: GameOfLife._get_bit(i, z) if z > -1 else 0
+        return sum(map(f, GameOfLife._get_neighbors(x)))
 
-        for neighbor in neighbors(index):
-            if (
-                neighbor > -1
-                and (neighbor // N) < N
-                and (neighbor % N != 0)
-                and count(i, neighbor) == 3
-            ):
-                j = setBit(j, neighbor, 1)
+    @staticmethod
+    def _bits(n):
+        while n:
+            b = n & (~n + 1)
+            yield b
+            n ^= b
 
-    return j
+    @staticmethod
+    def _set_bit(num, ind, val):
+        mask = 1 << ind
+        num &= ~mask
+        if val:
+            num |= mask
+        return num
 
+    def step(self):
+        j = self._state
 
-def get_coords(i):
-    for b in bits(i):
-        index = int(math.log(b, 2))
-        x, y = index % N, index // N
-        yield x, y
+        for b in GameOfLife._bits(self._state):
+            index = int(math.log(b, 2))
 
+            n = GameOfLife._count_neighbors(self._state, index)
+            if n < 2 or n > 3:
+                j = GameOfLife._set_bit(j, index, 0)
 
-def parse(s):
-    s = s.replace(" ", "")
-    s = s.replace(".", "0")
-    s = s.replace("O", "1")
+            for neighbor in GameOfLife._get_neighbors(index):
+                if (
+                    neighbor > -1
+                    and (neighbor // N) < N
+                    and (neighbor % N != 0)
+                    and GameOfLife._count_neighbors(self._state, neighbor) == 3
+                ):
+                    j = GameOfLife._set_bit(j, neighbor, 1)
 
-    p = N - s.index("\n")
-    if p > 0:
-        s = s.replace("\n", "0" * p)
-    else:
-        s = s.replace("\n", "")
+        self._state = j
+        return j
 
-    s = s[::-1]
-    return s
+    def get_state(self):
+        """
+        Returns the current state of the game as generator of (x, y) coordinates.
+        """
+        for b in GameOfLife._bits(self._state):
+            index = int(math.log(b, 2))
+            x, y = index % N, index // N
+            yield x, y
 
 
 def main(args):
-    glider_gun = """
-    ........................O...........
-    ......................O.O...........
-    ............OO......OO............OO
-    ...........O...O....OO............OO
-    OO........O.....O...OO..............
-    OO........O...O.OO....O.O...........
-    ..........O.....O.......O...........
-    ...........O...O....................
-    ............OO......................
-    """
-    glider_gun = glider_gun[1:]
+    path_to_seed = args.seed
 
-    path = args.seed
-    if not path:
-        s = parse(glider_gun)
-    else:
-        if not os.path.isfile(path):
-            print("Error: %s not found" % path)
+    seed = None
+    if path_to_seed is not None:
+        if not os.path.isfile(path_to_seed):
+            print("Error: %s not found" % path_to_seed)
             sys.exit()
 
-        f = open(path, mode="r")
-        s = parse(f.read())
-        f.close()
-        s = "0" * 10 * N + s
+        with open(path_to_seed, "r") as f:
+            seed = f.read()
 
-    i = int(s, 2)
+    env = GameOfLife(seed)
 
     # pygame setup
     black = pygame.Color(0, 0, 0)
@@ -121,9 +143,8 @@ def main(args):
     game_window = pygame.display.set_mode((window_x, window_y))
     game_window.fill(black)
 
-    gen = 0
     while True:
-        # handling key events
+        # handle key events
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_q:
@@ -132,23 +153,28 @@ def main(args):
 
         # draw
         game_window.fill(black)
-        for x, y in get_coords(i):
+        for x, y in env.get_state():
             rect = pygame.Rect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE)
             pygame.draw.rect(game_window, white, rect)
         pygame.display.update()
         fps.tick(args.speed)
 
-        # step
-        i = step(i)
-        gen += 1
+        env.step()
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Conway's Game of Life")
+    parser.add_argument(
+        "-s", "--seed", default=None, help="path to seed (defaults to glide gun)"
+    )
+    parser.add_argument("--speed", help="game speed", default=10, type=int)
+    args = parser.parse_args()
+    return args
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Conway's Game of Life")
-    parser.add_argument("-s", "--seed", help="path to seed")
-    parser.add_argument("--speed", help="game speed", default=10, type=int)
-    args = parser.parse_args()
     try:
+        args = parse_args()
         main(args)
     except KeyboardInterrupt:
         sys.stderr.write("\nExiting by user request.\n")
