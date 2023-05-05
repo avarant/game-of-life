@@ -3,6 +3,13 @@ import sys
 import math
 import argparse
 import pygame
+import logging
+
+logging.basicConfig(
+    format="%(message)s",
+    level=logging.DEBUG,
+)
+log = logging.getLogger(__name__)
 
 
 GLIDER_GUN = """
@@ -20,9 +27,12 @@ OO........O...O.OO....O.O...........
 N = 50
 BLOCK_SIZE = 10  # pygame window block size
 
+BG_COLOR = pygame.Color(0, 0, 0)
+BLOCK_COLOR = pygame.Color(255, 255, 255)
+
 
 class GameOfLife:
-    def __init__(self, seed=None):
+    def __init__(self, seed=None, render=False, speed=10):
         # default seed is glider gun
         if seed is None:
             self.seed = GLIDER_GUN[1:]
@@ -32,6 +42,16 @@ class GameOfLife:
             self.seed
         )  # current state represented as a binary integer
         self._gen = 0  # generation (step)
+
+        self._render = render
+        self._speed = speed
+
+        # pygame setup
+        if render:
+            pygame.init()
+            pygame.display.set_caption('Conway\'s Game of Life - Press "q" to quit.')
+            window_x, window_y = N * BLOCK_SIZE, N * BLOCK_SIZE
+            self._canvas = pygame.display.set_mode((window_x, window_y))
 
     @staticmethod
     def _parse(s):
@@ -105,6 +125,10 @@ class GameOfLife:
                     j = GameOfLife._set_bit(j, neighbor, 1)
 
         self._state = j
+
+        if self._render:
+            self.render()
+
         return j
 
     def get_state(self):
@@ -116,32 +140,27 @@ class GameOfLife:
             x, y = index % N, index // N
             yield x, y
 
+    def render(self):
+        self._canvas.fill(BG_COLOR)
+        for x, y in self.get_state():
+            rect = pygame.Rect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE)
+            pygame.draw.rect(self._canvas, BLOCK_COLOR, rect)
+        pygame.display.update()
+        pygame.time.Clock().tick(self._speed)
+
 
 def main(args):
     path_to_seed = args.seed
-
     seed = None
     if path_to_seed is not None:
         if not os.path.isfile(path_to_seed):
-            print("Error: %s not found" % path_to_seed)
+            log.error("Error: %s not found" % path_to_seed)
             sys.exit()
 
         with open(path_to_seed, "r") as f:
             seed = f.read()
 
-    env = GameOfLife(seed)
-
-    # pygame setup
-    black = pygame.Color(0, 0, 0)
-    white = pygame.Color(255, 255, 255)
-
-    pygame.init()
-    fps = pygame.time.Clock()
-    pygame.display.set_caption('Conway\'s Game of Life - Press "q" to quit.')
-
-    window_x, window_y = N * BLOCK_SIZE, N * BLOCK_SIZE
-    game_window = pygame.display.set_mode((window_x, window_y))
-    game_window.fill(black)
+    env = GameOfLife(seed=seed, render=True, speed=args.speed)
 
     while True:
         # handle key events
@@ -151,15 +170,15 @@ def main(args):
                     pygame.quit()
                     sys.exit()
 
-        # draw
-        game_window.fill(black)
-        for x, y in env.get_state():
-            rect = pygame.Rect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE)
-            pygame.draw.rect(game_window, white, rect)
-        pygame.display.update()
-        fps.tick(args.speed)
+                elif args.debug and event.key == pygame.K_RIGHT:
+                    env.step()
 
-        env.step()
+        if args.debug:
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_SPACE]:
+                env.step()
+        else:
+            env.step()
 
 
 def parse_args():
@@ -168,6 +187,7 @@ def parse_args():
         "-s", "--seed", default=None, help="path to seed (defaults to glide gun)"
     )
     parser.add_argument("--speed", help="game speed", default=10, type=int)
+    parser.add_argument("--debug", help="debug mode", action="store_true")
     args = parser.parse_args()
     return args
 
