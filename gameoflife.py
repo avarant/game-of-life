@@ -68,6 +68,13 @@ class GameOfLife:
         s = s[::-1]
         return int(s, 2)
 
+        # state = []
+        # for c in s:
+        #     if c not in ("0", "1"):
+        #         raise ValueError(f"Invalid seed: {s}")
+        #     state.append(int(c))
+        # return state
+
     @staticmethod
     def _get_bit(i, n):
         return i >> n & 1
@@ -88,6 +95,7 @@ class GameOfLife:
     @staticmethod
     def _count_neighbors(i, x):
         f = lambda z: GameOfLife._get_bit(i, z) if z > -1 else 0
+        # log.debug([f(z) for z in GameOfLife._get_neighbors(x)])
         return sum(map(f, GameOfLife._get_neighbors(x)))
 
     @staticmethod
@@ -108,8 +116,11 @@ class GameOfLife:
     def step(self):
         j = self._state
 
+        log.debug(f"State: {self._state}")
+        log.debug(len(list(GameOfLife._bits(self._state))))
         for b in GameOfLife._bits(self._state):
             index = int(math.log(b, 2))
+            log.debug(f"Bit: {b}, Index: {index}")
 
             n = GameOfLife._count_neighbors(self._state, index)
             if n < 2 or n > 3:
@@ -150,6 +161,9 @@ class GameOfLife:
 
 
 def main(args):
+    if args.debug:
+        log.setLevel(logging.DEBUG)
+
     path_to_seed = args.seed
     seed = None
     if path_to_seed is not None:
